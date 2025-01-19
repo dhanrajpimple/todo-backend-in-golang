@@ -1,70 +1,51 @@
-package main
+package handler
 
 import (
-	"fmt"
-	"log"
-	"net"
-	"net/http"
 	"os"
-	"todo-app/config"
-	"todo-app/routes"
-	"github.com/rs/cors"
-	"github.com/joho/godotenv"
+	"strconv"
+
+	"github.com/appwrite/sdk-for-go/appwrite"
+	"github.com/open-runtimes/types-for-go/v4/openruntimes"
 )
 
-// isPortAvailable checks if a port is available by trying to bind to it.
-func isPortAvailable(port string) bool {
-	ln, err := net.Listen("tcp", ":"+port)
-	if err != nil {
-		return false // port is not available
-	}
-	ln.Close() // port is available, so close it immediately
-	return true
+type Response struct {
+	Motto       string `json:"motto"`
+	Learn       string `json:"learn"`
+	Connect     string `json:"connect"`
+	GetInspired string `json:"getInspired"`
 }
 
-// getAvailablePort returns the first available port from the environment variable or defaults to 8000.
-func getAvailablePort(defaultPort string) string {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPort
-	}
+// This Appwrite function will be executed every time your function is triggered
+func Main(Context openruntimes.Context) openruntimes.Response {
+	// You can use the Appwrite SDK to interact with other services
+	// For this example, we're using the Users service
+	client := appwrite.NewClient(
+		appwrite.WithEndpoint(os.Getenv("APPWRITE_FUNCTION_API_ENDPOINT")),
+		appwrite.WithProject(os.Getenv("APPWRITE_FUNCTION_PROJECT_ID")),
+		appwrite.WithKey(Context.Req.Headers["x-appwrite-key"]),
+	)
+	users := appwrite.NewUsers(client)
 
-	// Check if the desired port is available, and try a fallback if not
-	if !isPortAvailable(port) {
-		log.Printf("Port %s is already in use. Trying a fallback port...\n", port)
-		for i := 1; i <= 5; i++ {
-			fallbackPort := fmt.Sprintf("%d", 8000+i)
-			if isPortAvailable(fallbackPort) {
-				log.Printf("Using fallback port: %s\n", fallbackPort)
-				return fallbackPort
-			}
-		}
-		log.Fatal("No available port found.")
-	}
-
-	return port
-}
-
-func main() {
-	// Load environment variables from .env file
-	err := godotenv.Load(".env")
+	response, err := users.List()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		Context.Error("Could not list users: " + err.Error())
+	} else {
+		// Log messages and errors to the Appwrite Console
+		// These logs won't be seen by your end users
+		Context.Log("Total users: " + strconv.Itoa(response.Total))
 	}
 
-	// Set up the CORS handler
-	corsHandler := cors.Default()
+	// The req object contains the request data
+	if Context.Req.Path == "/ping" {
+		// Use res object to respond with text(), json(), or binary()
+		// Don't forget to return a response!
+		return Context.Res.Text("Pong")
+	}
 
-	// Get the available port, defaulting to 8000
-	port := getAvailablePort("8000")
-
-	// Connect to MongoDB
-	config.ConnectToMongoDB()
-
-	// Set up routes
-	router := routes.SetupRouter()
-
-	// Start the server with the available port and CORS handler
-	log.Printf("Starting server on port %s...\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, corsHandler.Handler(router)))
+	return Context.Res.Json(Response{
+		Motto:       "Build like a team of hundreds_",
+		Learn:       "https://appwrite.io/docs",
+		Connect:     "https://appwrite.io/discord",
+		GetInspired: "https://builtwith.appwrite.io",
+	})
 }
