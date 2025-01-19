@@ -16,8 +16,8 @@ func main(){
 		log.Fatal("Error loading .env file")
 	}
 	corsHandler := cors.Default()
-     port := os.Getenv("PORT")
+     port := os.Getenv("PORT") 
 	config.ConnectToMongoDB()
 	router := routes.SetupRouter()
-	log.Fatal(http.ListenAndServe(port, corsHandler.Handler(router)))
+	log.Fatal(http.ListenAndServe(port || ":5000", corsHandler.Handler(router)))
 }
