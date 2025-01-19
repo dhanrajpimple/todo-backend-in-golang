@@ -18,7 +18,7 @@ func main(){
 	corsHandler := cors.Default()
      port := os.Getenv("PORT")
 	 if port ==""{
-		port = ":5000"
+		port = ":8000"
 	 } 
 	config.ConnectToMongoDB()
 	router := routes.SetupRouter()
